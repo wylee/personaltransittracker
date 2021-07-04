@@ -1,8 +1,34 @@
-@import "../styles/animations";
-@import "../styles/mixins";
-@import "../styles/variables";
+<template>
+  <div id="search">
+    <form>
+      <input
+        type="text"
+        title="Enter a stop ID or name"
+        placeholder="Enter a stop ID or name"
+      />
 
-.Search {
+      <button type="submit" title="Search" class="material-icons">
+        search
+      </button>
+
+      <button type="reset" title="Clear" class="material-icons">close</button>
+    </form>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "Search",
+  // setup() {},
+};
+</script>
+
+<style scoped lang="scss">
+@import "../assets/styles/animations";
+@import "../assets/styles/mixins";
+@import "../assets/styles/variables";
+
+#search {
   position: absolute;
   width: $panel-width;
   z-index: 3;
@@ -72,8 +98,9 @@
     padding-left: 0;
   }
 
-  .result, .error {
-    animation: fade-in .75s;
+  .result,
+  .error {
+    animation: fade-in 0.75s;
   }
 
   .result {
@@ -173,3 +200,4 @@
     width: 100%;
   }
 }
+</style>

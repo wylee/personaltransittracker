@@ -1,8 +1,21 @@
-@import "./styles/animations";
-@import "./styles/mixins.scss";
-@import "./styles/variables.scss";
+<template>
+  <div id="menu">
+    <button type="button" class="material-icons">menu</button>
+  </div>
+</template>
 
-.Menu {
+<script>
+export default {
+  name: "Menu",
+};
+</script>
+
+<style scoped lang="scss">
+@import "../assets/styles/animations";
+@import "../assets/styles/mixins.scss";
+@import "../assets/styles/variables.scss";
+
+#menu {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -21,8 +34,9 @@
     }
   }
 
-  > div.menu-backdrop, ul.menu {
-    animation: fade-in .5s;
+  > div.menu-backdrop,
+  ul.menu {
+    animation: fade-in 0.5s;
   }
 
   > div.menu-backdrop {
@@ -61,3 +75,4 @@
     }
   }
 }
+</style>
