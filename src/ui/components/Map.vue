@@ -1,5 +1,28 @@
 <template>
   <div id="map">
+    <div
+      className="controls bottom-left column"
+      @contextmenu="
+        (event) => {
+          event.stopPropagation();
+        }
+      "
+    >
+      <div className="mapbox-wordmark">
+        <a
+          href="https://www.mapbox.com/about/maps/"
+          title="Map tiles and styling provided by Mapbox"
+        >
+          <img :src="MAPBOX_WORDMARK_IMAGE_DATA" height="18" alt="Mapbox" />
+        </a>
+      </div>
+
+      <!-- overview map/switcher -->
+      <div class="overview-map">
+        <div className="label">Layer</div>
+      </div>
+    </div>
+
     <div class="controls bottom-right column">
       <button
         type="button"
@@ -35,30 +58,6 @@
       >
         remove
       </button>
-    </div>
-
-    <div
-      className="controls bottom-left column"
-      @contextmenu="
-        (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      "
-    >
-      <div className="mapbox-wordmark">
-        <a
-          href="https://www.mapbox.com/about/maps/"
-          title="Map tiles and styling provided by Mapbox"
-        >
-          <img :src="MAPBOX_WORDMARK_IMAGE_DATA" height="18" alt="Mapbox" />
-        </a>
-      </div>
-
-      <!-- overview map/switcher -->
-      <div class="overview-map">
-        <div className="label">Layer</div>
-      </div>
     </div>
 
     <div id="attributions" @contextmenu="(event) => event.stopPropagation()">

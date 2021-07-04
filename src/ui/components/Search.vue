@@ -1,10 +1,11 @@
 <template>
   <div id="search">
-    <form>
+    <form @submit="search">
       <input
         type="text"
         title="Enter a stop ID or name"
         placeholder="Enter a stop ID or name"
+        v-model="term"
       />
 
       <button type="submit" title="Search" class="material-icons">
@@ -17,10 +18,23 @@
 </template>
 
 <script>
-export default {
+import { defineComponent } from "vue";
+import { mapState, mapMutations } from "vuex";
+
+export default defineComponent({
   name: "Search",
   // setup() {},
-};
+  data() {
+    return {
+      term: "",
+    };
+  },
+  methods: {
+    search: function (event) {
+      event.preventDefault();
+    },
+  },
+});
 </script>
 
 <style scoped lang="scss">
