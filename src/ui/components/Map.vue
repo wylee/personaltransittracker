@@ -1,14 +1,7 @@
 <template>
   <div id="map">
-    <div
-      className="controls bottom-left column"
-      @contextmenu="
-        (event) => {
-          event.stopPropagation();
-        }
-      "
-    >
-      <div className="mapbox-wordmark">
+    <div class="controls bottom-left column" @contextmenu.stop="">
+      <div class="mapbox-wordmark">
         <a
           href="https://www.mapbox.com/about/maps/"
           title="Map tiles and styling provided by Mapbox"
@@ -19,7 +12,7 @@
 
       <!-- overview map/switcher -->
       <div class="overview-map">
-        <div className="label">Layer</div>
+        <div class="label">Layer</div>
       </div>
     </div>
 
@@ -60,16 +53,16 @@
       </button>
     </div>
 
-    <div id="attributions" @contextmenu="(event) => event.stopPropagation()">
-      <div className="mapbox-copyright">
+    <div id="attributions" @contextmenu.stop="">
+      <div class="mapbox-copyright">
         © <a href="https://www.mapbox.com/about/maps/">Mapbox</a>
       </div>
 
-      <div className="osm-copyright">
+      <div class="osm-copyright">
         © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>
       </div>
 
-      <div className="mapbox-improve">
+      <div class="mapbox-improve">
         <a href="https://www.mapbox.com/map-feedback/">Improve this map</a>
       </div>
     </div>
@@ -79,13 +72,13 @@
 <script lang="ts">
 import { onMounted, onUnmounted } from "vue";
 
-import { MAPBOX_WORDMARK_IMAGE_DATA } from "./const";
+import { MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import Map from "./map";
 
 export default {
   name: "Map",
   setup(): { map: Map; MAPBOX_WORDMARK_IMAGE_DATA: string } {
-    const map = new Map([0, 0], 4);
+    const map = new Map();
     onMounted(() => {
       map.setTarget("map");
     });
@@ -139,16 +132,6 @@ export default {
     }
   }
 
-  &.bottom-right {
-    bottom: $standard-spacing;
-    right: $standard-spacing;
-
-    @media (max-width: $xs-width - 1px) {
-      bottom: $quarter-standard-spacing;
-      right: $quarter-standard-spacing;
-    }
-  }
-
   &.bottom-left {
     bottom: $standard-spacing;
     left: $standard-spacing;
@@ -190,6 +173,16 @@ export default {
     @media (max-width: $xs-width - 1px) {
       left: $quarter-standard-spacing;
       bottom: $half-standard-spacing + 16px;
+    }
+  }
+
+  &.bottom-right {
+    bottom: $standard-spacing;
+    right: $standard-spacing;
+
+    @media (max-width: $xs-width - 1px) {
+      bottom: $quarter-standard-spacing;
+      right: $quarter-standard-spacing;
     }
   }
 }

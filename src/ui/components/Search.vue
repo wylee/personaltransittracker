@@ -1,6 +1,6 @@
 <template>
   <div id="search">
-    <form @submit="search">
+    <form @submit.prevent="() => search()">
       <input
         type="text"
         title="Enter a stop ID or name"
@@ -8,30 +8,65 @@
         v-model="term"
       />
 
-      <button type="submit" title="Search" class="material-icons">
+      <button
+        type="submit"
+        title="Search"
+        class="material-icons"
+        :disabled="!(term.trim() || error)"
+      >
         search
       </button>
 
-      <button type="reset" title="Clear" class="material-icons">close</button>
+      <button
+        type="reset"
+        title="Clear"
+        class="material-icons"
+        @click="reset"
+        :disabled="!term"
+      >
+        close
+      </button>
     </form>
   </div>
 </template>
 
 <script>
 import { defineComponent } from "vue";
-import { mapState, mapMutations } from "vuex";
+import { mapState } from "vuex";
 
 export default defineComponent({
   name: "Search",
-  // setup() {},
   data() {
     return {
-      term: "",
+      internalTerm: null,
     };
   },
+  computed: {
+    term: {
+      get() {
+        return this.internalTerm ?? this.$store.state.term;
+      },
+      set(value) {
+        if (!value) {
+          this.reset();
+        } else {
+          this.internalTerm = value;
+        }
+      },
+    },
+    ...mapState(["error"]),
+  },
   methods: {
-    search: function (event) {
-      event.preventDefault();
+    search() {
+      // XXX: The search action will re-set the search term, which will
+      //      cause the internal term here to be re-set too.
+      const term = this.term;
+      this.internalTerm = null;
+      this.$store.dispatch("search", { term });
+    },
+    reset() {
+      this.internalTerm = null;
+      this.$store.commit("resetSearchState");
     },
   },
 });
@@ -46,18 +81,6 @@ export default defineComponent({
   position: absolute;
   width: $panel-width;
   z-index: 3;
-
-  .progress-indicator {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    z-index: 100;
-    animation: blinker 1.5s linear infinite;
-    background-color: seagreen;
-    box-shadow: 1px 1px 2px seagreen;
-  }
 
   form {
     @include floating-element();
@@ -112,43 +135,10 @@ export default defineComponent({
     padding-left: 0;
   }
 
-  .result,
-  .error {
+  #result {
     animation: fade-in 0.75s;
-  }
-
-  .result {
     max-height: 400px;
     overflow-x: hidden;
-  }
-
-  .error {
-    @include floating-element();
-
-    background-color: white;
-    color: red;
-    margin: 0;
-    padding: $standard-spacing;
-    padding-top: 40px + $twice-standard-spacing;
-
-    .error-title {
-      font-size: 20px;
-      margin-bottom: $standard-spacing;
-    }
-
-    .error-message > * {
-      margin-top: 0;
-      margin-bottom: $half-standard-spacing;
-      padding: 0;
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    @media (max-width: $xs-width - 1px) {
-      padding: $half-standard-spacing;
-      padding-top: 40px + $standard-spacing;
-    }
   }
 
   ul.stops {

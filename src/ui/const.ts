@@ -2,6 +2,8 @@ import { get as getProjection } from "ol/proj";
 
 export const DEBUG = process.env.VUE_APP_DEBUG;
 export const API_URL = process.env.VUE_APP_API_URL;
+export const ARRIVALS_URL = `${API_URL}/arrivals`;
+export const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
 export const FEATURE_LAYER_MAX_RESOLUTION = 100;
 export const GEOGRAPHIC_PROJECTION = getProjection("EPSG:4326");

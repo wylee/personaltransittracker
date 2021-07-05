@@ -10,13 +10,9 @@
       <template v-else>menu</template>
     </button>
 
-    <div
-      class="menu-backdrop"
-      @click="closeMenu()"
-      :style="{ display: menuOpen ? 'block' : 'none' }"
-    />
+    <div class="menu-backdrop" @click="closeMenu()" v-if="menuOpen" />
 
-    <ul class="menu" :style="{ display: menuOpen ? 'block' : 'none' }">
+    <ul class="menu" v-if="menuOpen">
       <li class="title">MyStops</li>
 
       <li>

@@ -4,45 +4,45 @@ import View from "ol/View";
 import BaseLayer from "ol/layer/Base";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
+import VectorTileLayer from "ol/layer/VectorTile";
 
 import OSMSource from "ol/source/OSM";
 import TileDebugSource from "ol/source/TileDebug";
 import VectorSource from "ol/source/Vector";
+import VectorTileSource from "ol/source/VectorTile";
 import XYZSource from "ol/source/XYZ";
 
-import GeoJSONFormat from "ol/format/GeoJSON";
+import MVTFormat from "ol/format/MVT";
 
+import Collection from "ol/Collection";
 import { EventsKey } from "ol/events";
-import { bbox as bboxLoadingStrategy } from "ol/loadingstrategy";
-import { transformExtent } from "ol/proj";
 import { unByKey } from "ol/Observable";
 
-import {
-  DEBUG,
-  API_URL,
-  FEATURE_LAYER_MAX_RESOLUTION,
-  GEOGRAPHIC_PROJECTION,
-  NATIVE_PROJECTION,
-} from "./const";
+import { DEBUG, API_URL, FEATURE_LAYER_MAX_RESOLUTION } from "../const";
+
+import { STOP_STYLE } from "./map-styles";
 
 export default class Map {
-  private olMap: OLMap;
-  private view: View;
-  private initialCenter: number[];
-  private initialZoom: number;
-  private baseLayers: BaseLayer[];
-  private animationDuration = 250;
+  private readonly olMap: OLMap;
+  private readonly view: View;
+  private readonly layers: BaseLayer[];
+  private readonly baseLayers: TileLayer[];
+  private readonly stopsLayer: VectorTileLayer;
+  private readonly userLocationLayer: VectorLayer;
   private listenerKeys: EventsKey[] = [];
 
-  constructor(center: number[], zoom: number) {
-    this.initialCenter = center;
-    this.initialZoom = zoom;
-
+  constructor(
+    private initialCenter: number[] = [-13655274.508685641, 5704240.981993447],
+    private initialZoom: number = 14,
+    private minZoom: number = 4,
+    private maxZoom: number = 19,
+    private animationDuration: number = 250
+  ) {
     this.view = new View({
-      center,
-      zoom,
-      minZoom: 4,
-      maxZoom: 19,
+      center: initialCenter,
+      zoom: initialZoom,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
       constrainResolution: true,
     });
 
@@ -61,10 +61,39 @@ export default class Map {
       this.baseLayers.unshift(makeDebugLayer());
     }
 
+    this.stopsLayer = makeMVTLayer("Stops", "stops/mvt", {
+      visible: true,
+      style: STOP_STYLE,
+    });
+
+    this.userLocationLayer = new VectorLayer({
+      visible: false,
+      source: new VectorSource({
+        features: new Collection(),
+      }),
+    });
+
+    this.layers = [...this.baseLayers, this.stopsLayer, this.userLocationLayer];
+
     this.olMap = new OLMap({
       controls: [],
-      layers: this.baseLayers,
+      layers: this.layers,
       view: this.view,
+    });
+
+    this.on("click", (event: any) => {
+      this.olMap.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => {
+          console.log(feature);
+          return true; // Only select one feature at a time
+        },
+        {
+          layerFilter: (layer) => {
+            return layer === this.stopsLayer;
+          },
+        }
+      );
     });
   }
 
@@ -133,7 +162,7 @@ function makeMapboxLayer(
   label: string,
   shortLabel?: string,
   visible = false
-) {
+): TileLayer {
   const accessToken = process.env.VUE_APP_MAPBOX_ACCESS_TOKEN;
   const source = new XYZSource({
     url: `https://api.mapbox.com/styles/v1/${name}/tiles/256/{z}/{x}/{y}?access_token=${accessToken}`,
@@ -149,7 +178,7 @@ function makeOSMLayer(
   label = "OpenStreetMap",
   shortLabel = "OSM",
   visible = false
-) {
+): TileLayer {
   const source = new OSMSource();
   const layer = new TileLayer({ source, visible });
   layer.set("label", label);
@@ -157,7 +186,7 @@ function makeOSMLayer(
   return layer;
 }
 
-function makeDebugLayer(visible = true) {
+function makeDebugLayer(visible = true): TileLayer {
   const osmSource = new OSMSource();
   const source = new TileDebugSource({
     projection: osmSource.getProjection(),
@@ -169,21 +198,18 @@ function makeDebugLayer(visible = true) {
   return layer;
 }
 
-function makeFeatureLayer(label: string, path: string, options: any = {}) {
-  const url = `${API_URL}/${path}/.geojson`;
-  const source = new VectorSource({
-    format: new GeoJSONFormat(),
-    strategy: bboxLoadingStrategy,
-    url: (extent) => {
-      const bbox = transformExtent(
-        extent,
-        NATIVE_PROJECTION,
-        GEOGRAPHIC_PROJECTION
-      ).join(",");
-      return `${url}?bbox=${bbox}`;
-    },
+function makeMVTLayer(
+  label: string,
+  path: string,
+  options: any = {}
+): VectorTileLayer {
+  const url = `${API_URL}/${path}/{z}/{x}/{y}`;
+  const source = new VectorTileSource({
+    url,
+    format: new MVTFormat(),
   });
   options.maxResolution = options.maxResolution || FEATURE_LAYER_MAX_RESOLUTION;
-  options.projection = options.projection || GEOGRAPHIC_PROJECTION;
-  return new VectorLayer({ label, source, ...options });
+  const layer = new VectorTileLayer({ source, ...options });
+  layer.set("label", label);
+  return layer;
 }
