@@ -19,7 +19,8 @@ export interface State {
   stops: number[];
   result: Result | null;
   error: Error | null;
-  timeoutID: number | null;
+  timeoutID: number | undefined;
+  baseLayer: number;
 }
 
 export const key: InjectionKey<Store<State>> = Symbol();
@@ -38,7 +39,8 @@ export const store = createStore<State>({
     stops: [],
     result: null,
     error: null,
-    timeoutID: null,
+    timeoutID: undefined,
+    baseLayer: 0,
   },
   mutations: {
     openMenu(state) {
@@ -68,9 +70,17 @@ export const store = createStore<State>({
       state.term = "";
       state.stops = [];
       state.error = null;
+      clearTimeout(state.timeoutID);
+      state.timeoutID = undefined;
     },
     setError(state, payload: { error: Error }) {
       state.error = payload.error;
+    },
+    setBaseLayer(state, payload: { baseLayer: number }) {
+      state.baseLayer = payload.baseLayer;
+    },
+    nextBaseLayer(state, payload: { numBaseLayers: number }) {
+      state.baseLayer = (state.baseLayer + 1) % payload.numBaseLayers;
     },
   },
   actions: {

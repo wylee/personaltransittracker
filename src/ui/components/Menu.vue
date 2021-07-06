@@ -22,6 +22,17 @@
         </a>
       </li>
 
+      <li v-for="(layer, i) in layers" :key="i">
+        <div v-if="i === baseLayer">
+          <span class="material-icons">layers</span>
+          <span>{{ layer }}</span>
+        </div>
+        <a v-else href="" @click.prevent="setBaseLayer(i)">
+          <span class="material-icons">layers</span>
+          <span>{{ layer }}</span>
+        </a>
+      </li>
+
       <li class="section-heading">
         <span>Links</span>
       </li>
@@ -78,11 +89,21 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import { mapState, mapMutations } from "vuex";
+import { DEBUG } from "../const";
 
 export default defineComponent({
   name: "Menu",
+  data() {
+    const layers = ["Map", "Satellite", "OpenStreetMap"];
+    if (DEBUG) {
+      layers.unshift("Debug");
+    }
+    return {
+      layers,
+    };
+  },
   computed: {
-    ...mapState(["menuOpen"]),
+    ...mapState(["menuOpen", "baseLayer"]),
     ...mapState({
       buttonTitle: (state: any) => {
         return state.menuOpen ? "Close menu" : "Open menu";
@@ -90,6 +111,10 @@ export default defineComponent({
     }),
   },
   methods: {
+    setBaseLayer(baseLayer: number) {
+      this.$store.commit("setBaseLayer", { baseLayer });
+      this.$store.commit("closeMenu");
+    },
     ...mapMutations(["closeMenu", "toggleMenu"]),
   },
 });

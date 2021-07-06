@@ -46,9 +46,11 @@ header {
       right: auto;
       bottom: $standard-spacing;
       left: $standard-spacing;
-      padding: 0;
+      padding: $quarter-standard-spacing;
       font-size: 20px;
       text-align: left;
+      background-color: rgba(255, 255, 255, 0.5);
+      @include floating-element();
     }
   }
 

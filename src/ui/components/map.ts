@@ -41,9 +41,12 @@ export default class Map {
   private readonly view: View;
   private readonly layers: BaseLayer[];
   private readonly baseLayers: TileLayer[];
+  private baseLayer = 0;
   private readonly stopsLayer: VectorTileLayer;
   private readonly userLocationLayer: VectorLayer;
   private listenerKeys: EventsKey[] = [];
+  private overviewMap: OLMap;
+  private overviewMapBaseLayers: BaseLayer[];
 
   constructor(
     private initialCenter: number[] = [-13655274.508685641, 5704240.981993447],
@@ -95,6 +98,32 @@ export default class Map {
       view: this.view,
     });
 
+    this.overviewMapBaseLayers = this.baseLayers.map((layer, i) => {
+      return new TileLayer({
+        source: layer.getSource(),
+        visible: i === this.baseLayer + 1,
+      });
+    });
+
+    this.overviewMap = new OLMap({
+      controls: [],
+      interactions: [],
+      layers: this.overviewMapBaseLayers,
+      view: new View({
+        zoom: 12,
+        minZoom: 12,
+        maxZoom: 12,
+        constrainResolution: true,
+        constrainRotation: true,
+      }),
+    });
+
+    this.on("moveend", () => {
+      this.overviewMap
+        .getView()
+        .animate({ center: this.getCenter(), duration: 200 });
+    });
+
     // TODO: Add/remove stop ID to/from list and search
     this.onFeature(
       "click",
@@ -104,8 +133,6 @@ export default class Map {
       undefined,
       this.stopsLayer
     );
-
-    // TODO: Show/hide stop info
   }
 
   on(type: string, listener: (event: Event) => any): EventsKey {
@@ -153,12 +180,14 @@ export default class Map {
     return this.on(type, listener);
   }
 
-  setTarget(target: string): void {
+  setTarget(target: string, overviewMapTarget: string): void {
     this.map.setTarget(target);
+    this.overviewMap.setTarget(overviewMapTarget);
   }
 
   cleanup(): void {
     this.map.setTarget(undefined);
+    this.overviewMap.setTarget(undefined);
     this.listenerKeys.forEach((key) => {
       unByKey(key);
     });
@@ -166,6 +195,10 @@ export default class Map {
 
   getSize(): number[] {
     return this.map.getSize() ?? [0, 0];
+  }
+
+  getCenter(): number[] | undefined {
+    return this.view.getCenter();
   }
 
   setCenter(center: number[]): void {
@@ -202,6 +235,32 @@ export default class Map {
         this.setZoom(zoom - 1);
       }
     }
+  }
+
+  getBaseLayers(): BaseLayer[] {
+    return this.baseLayers;
+  }
+
+  getBaseLayer(): BaseLayer {
+    return this.baseLayers[this.baseLayer];
+  }
+
+  getNextBaseLayer(): BaseLayer {
+    return this.baseLayers[(this.baseLayer + 1) % this.baseLayers.length];
+  }
+
+  setBaseLayer(baseLayer: number): void {
+    const overviewMapBaseLayer = (baseLayer + 1) % this.baseLayers.length;
+    this.baseLayers.forEach((layer, i) => layer.setVisible(i === baseLayer));
+    this.baseLayer = baseLayer;
+    this.overviewMapBaseLayers.forEach((layer, i) =>
+      layer.setVisible(i === overviewMapBaseLayer)
+    );
+  }
+
+  nextBaseLayer(): void {
+    const baseLayer = (this.baseLayer + 1) % this.baseLayers.length;
+    this.setBaseLayer(baseLayer);
   }
 
   getLayer(label: string): BaseLayer {
@@ -262,10 +321,17 @@ function makeMVTLayer(
   const url = `${API_URL}/${path}/{z}/{x}/{y}`;
   const source = new VectorTileSource({
     url,
-    format: new MVTFormat(),
+    format: new MVTFormat({
+      idProperty: "feature_id",
+    }),
   });
   options.maxResolution = options.maxResolution || FEATURE_LAYER_MAX_RESOLUTION;
-  const layer = new VectorTileLayer({ source, ...options });
+  const layer = new VectorTileLayer({
+    source,
+    renderOrder: null,
+    renderBuffer: 20,
+    ...options,
+  });
   layer.set("label", label);
   return layer;
 }

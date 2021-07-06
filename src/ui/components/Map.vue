@@ -11,8 +11,8 @@
       </div>
 
       <!-- overview map/switcher -->
-      <div class="overview-map">
-        <div class="label">Layer</div>
+      <div id="overview-map" title="Change base map" @click="nextBaseLayer()">
+        <div class="label">{{ nextBaseLayerLabel }}</div>
       </div>
     </div>
 
@@ -51,6 +51,15 @@
       >
         remove
       </button>
+
+      <button
+        type="button"
+        title="Change base map"
+        class="material-icons visible-sm"
+        @click="nextBaseLayer()"
+      >
+        layers
+      </button>
     </div>
 
     <div id="attributions" @contextmenu.stop="">
@@ -72,13 +81,16 @@
 </template>
 
 <script lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, ref, Ref } from "vue";
 import { MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
+import { useStore } from "../store";
 import Map from "./map";
 import StopInfo from "./StopInfo.vue";
 
 interface Setup {
   map: Map;
+  nextBaseLayerLabel: Ref<string>;
+  nextBaseLayer: () => void;
   MAPBOX_WORDMARK_IMAGE_DATA: string;
 }
 
@@ -86,17 +98,41 @@ export default {
   name: "Map",
   components: { StopInfo },
   setup(): Setup {
+    const store = useStore();
     const map = new Map();
+    const numBaseLayers = map.getBaseLayers().length;
+    const nextBaseLayerLabel = ref(map.getNextBaseLayer().get("shortLabel"));
+
+    const unsubscribeFromStoreMutations = store.subscribe((mutation, state) => {
+      switch (mutation.type) {
+        case "setBaseLayer":
+        case "nextBaseLayer":
+          map.setBaseLayer(state.baseLayer);
+          nextBaseLayerLabel.value = map.getNextBaseLayer().get("shortLabel");
+          break;
+        default:
+      }
+    });
+
+    function nextBaseLayer() {
+      store.commit("nextBaseLayer", { numBaseLayers });
+    }
 
     onMounted(() => {
-      map.setTarget("map");
+      map.setTarget("map", "overview-map");
     });
 
     onUnmounted(() => {
       map.cleanup();
+      unsubscribeFromStoreMutations();
     });
 
-    return { map, MAPBOX_WORDMARK_IMAGE_DATA };
+    return {
+      map,
+      nextBaseLayerLabel,
+      nextBaseLayer,
+      MAPBOX_WORDMARK_IMAGE_DATA,
+    };
   },
 };
 </script>
@@ -113,6 +149,7 @@ export default {
   left: 0;
   z-index: 1;
   background-color: lighten(lightseagreen, 50%);
+  user-select: none;
 }
 
 #map > .controls {
@@ -147,7 +184,7 @@ export default {
     bottom: $standard-spacing;
     left: $standard-spacing;
 
-    .overview-map {
+    #overview-map {
       @include floating-element();
       @include hidden-sm();
 
@@ -178,12 +215,12 @@ export default {
       }
     }
     @media (max-width: $sm-width - 1px) {
-      bottom: $standard-spacing + 20px;
+      bottom: $standard-spacing + 28px;
     }
 
     @media (max-width: $xs-width - 1px) {
       left: $quarter-standard-spacing;
-      bottom: $half-standard-spacing + 16px;
+      bottom: $half-standard-spacing + 20px;
     }
   }
 
