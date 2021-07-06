@@ -55,13 +55,17 @@ SELECT
   ST_AsMVT(q, 'stops')
 FROM (
   SELECT
+    'stops.' || stop.stop_id::text AS feature_id,
     stop.stop_id AS id,
     stop.name,
     stop.direction,
     string_agg(route.short_name, ', ') as routes,
     ST_AsMVTGeom(
-      stop.location,
-      ST_MakeBox2D(ST_Point(%s, %s), ST_Point(%s, %s))
+      ST_Transform(stop.location, 3857),
+      ST_MakeEnvelope(%s, %s, %s, %s, 3857),
+      NULL,
+      NULL,
+      false
     ) AS geom
   FROM
     stop
@@ -73,8 +77,8 @@ FROM (
     ON stop_route.route_id = route.id
   WHERE
     ST_Intersects(
-      stop.location,
-      ST_MakeEnvelope(%s, %s, %s, %s, 4326)
+      ST_Transform(stop.location, 3857),
+      ST_MakeEnvelope(%s, %s, %s, %s, 3857)
     )
   GROUP BY
     stop.id
@@ -83,7 +87,7 @@ FROM (
 
 
 @cache_page(CACHE_TIME)
-def mvt(request, z, x, y, *, statement=MVT_STATEMENT, bounds=mercantile.bounds):
+def mvt(request, z, x, y, *, statement=MVT_STATEMENT, bounds=mercantile.xy_bounds):
     minx, miny, maxx, maxy = bounds(x, y, z)
     bind_params = (minx, miny, maxx, maxy, minx, miny, maxx, maxy)
     with connection.cursor() as cursor:
