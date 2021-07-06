@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import cache_page
 
-from mystops.mvt import make_mvt_view
+import mercantile
 
 from .models import Stop
 
@@ -50,6 +50,46 @@ def stop(request, stop_id):
     )
 
 
-mvt = cache_page(CACHE_TIME)(
-    make_mvt_view("stop", "location", {"stop_id": "id", "name": None})
-)
+MVT_STATEMENT = """\
+SELECT
+  ST_AsMVT(q, 'stops')
+FROM (
+  SELECT
+    stop.stop_id AS id,
+    stop.name,
+    stop.direction,
+    string_agg(route.short_name, ', ') as routes,
+    ST_AsMVTGeom(
+      stop.location,
+      ST_MakeBox2D(ST_Point(%s, %s), ST_Point(%s, %s))
+    ) AS geom
+  FROM
+    stop
+  JOIN
+    stop_route
+    ON stop_route.stop_id = stop.id
+  JOIN
+    route
+    ON stop_route.route_id = route.id
+  WHERE
+    ST_Intersects(
+      stop.location,
+      ST_MakeEnvelope(%s, %s, %s, %s, 4326)
+    )
+  GROUP BY
+    stop.id
+) AS q;\
+"""
+
+
+@cache_page(CACHE_TIME)
+def mvt(request, z, x, y, *, statement=MVT_STATEMENT, bounds=mercantile.bounds):
+    minx, miny, maxx, maxy = bounds(x, y, z)
+    bind_params = (minx, miny, maxx, maxy, minx, miny, maxx, maxy)
+    with connection.cursor() as cursor:
+        cursor.execute(statement, bind_params)
+        row = cursor.fetchone()
+        content = row[0]
+    return HttpResponse(
+        content=content, charset=None, content_type="application/x-protobuf"
+    )
