@@ -13,6 +13,12 @@ interface Error {
   detail?: string;
 }
 
+interface MapContextMenuState {
+  open: boolean;
+  x: number;
+  y: number;
+}
+
 export interface State {
   menuOpen: boolean;
   term: string;
@@ -21,6 +27,7 @@ export interface State {
   error: Error | null;
   timeoutID: number | undefined;
   baseLayer: number;
+  mapContextMenu: MapContextMenuState;
 }
 
 export const key: InjectionKey<Store<State>> = Symbol();
@@ -41,6 +48,11 @@ export const store = createStore<State>({
     error: null,
     timeoutID: undefined,
     baseLayer: 0,
+    mapContextMenu: {
+      open: false,
+      x: 0,
+      y: 0,
+    },
   },
   mutations: {
     openMenu(state) {
@@ -81,6 +93,12 @@ export const store = createStore<State>({
     },
     nextBaseLayer(state, payload: { numBaseLayers: number }) {
       state.baseLayer = (state.baseLayer + 1) % payload.numBaseLayers;
+    },
+    setMapContextMenuState(state, payload: MapContextMenuState) {
+      state.mapContextMenu = payload;
+    },
+    closeMapContextMenu(state, payload) {
+      state.mapContextMenu = { open: false, x: 0, y: 0 };
     },
   },
   actions: {

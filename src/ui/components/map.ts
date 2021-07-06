@@ -197,6 +197,10 @@ export default class Map {
     return this.map.getSize() ?? [0, 0];
   }
 
+  getCoordinateFromPixel(pixel: number[]): number[] {
+    return this.map.getCoordinateFromPixel(pixel);
+  }
+
   getCenter(): number[] | undefined {
     return this.view.getCenter();
   }

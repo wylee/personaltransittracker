@@ -11,6 +11,7 @@
 import { defineComponent, onMounted, ref, Ref } from "vue";
 import Feature from "ol/Feature";
 import Map from "./map";
+import { useStore } from "../store";
 
 interface StopInfo {
   id: number;
@@ -40,18 +41,24 @@ export default defineComponent({
     },
   },
   setup(props): Setup {
+    const store = useStore();
     const stopInfo = ref<StopInfo | null>(null);
-
     onMounted(() => {
       props.map.onFeature(
         "pointermove",
-        (map, feature, px) => (stopInfo.value = getStopInfo(map, feature, px)),
+        (map, feature, px) => {
+          if (!store.state.mapContextMenu.open) {
+            stopInfo.value = getStopInfo(map, feature, px);
+          }
+        },
         () => (stopInfo.value = null),
         props.map.getLayer("Stops"),
         10
       );
+      props.map.on("contextmenu", () => {
+        stopInfo.value = null;
+      });
     });
-
     return { stopInfo };
   },
 });

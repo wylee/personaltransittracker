@@ -5,6 +5,30 @@
   <router-view />
 </template>
 
+<script lang="ts">
+import { defineComponent, onMounted, onUnmounted } from "vue";
+import { useStore } from "./store";
+
+export default defineComponent({
+  setup() {
+    const store = useStore();
+    function onClick() {
+      store.commit("closeMapContextMenu");
+    }
+    onMounted(() => {
+      const el = document.getElementById("app") as HTMLElement;
+      el.addEventListener("click", onClick);
+      el.addEventListener("contextmenu", onClick);
+    });
+    onUnmounted(() => {
+      const el = document.getElementById("app") as HTMLElement;
+      el.removeEventListener("click", onClick);
+      el.removeEventListener("contextmenu", onClick);
+    });
+  },
+});
+</script>
+
 <style scoped lang="scss">
 @import "./assets/styles/mixins";
 @import "./assets/styles/variables";

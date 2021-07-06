@@ -1,5 +1,9 @@
 <template>
-  <div id="map">
+  <div
+    id="map"
+    @click="closeContextMenu"
+    @contextmenu.prevent.stop="openContextMenu"
+  >
     <div class="controls bottom-left column" @contextmenu.stop="">
       <div class="mapbox-wordmark">
         <a
@@ -76,27 +80,31 @@
       </div>
     </div>
 
+    <MapContextMenu :map="map" />
     <StopInfo :map="map" />
   </div>
 </template>
 
 <script lang="ts">
-import { onMounted, onUnmounted, ref, Ref } from "vue";
+import { defineComponent, onMounted, onUnmounted, ref, Ref } from "vue";
 import { MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
+import MapContextMenu from "./MapContextMenu.vue";
 import StopInfo from "./StopInfo.vue";
 
 interface Setup {
   map: Map;
   nextBaseLayerLabel: Ref<string>;
   nextBaseLayer: () => void;
+  openContextMenu: (event: any) => void;
+  closeContextMenu: () => void;
   MAPBOX_WORDMARK_IMAGE_DATA: string;
 }
 
-export default {
+export default defineComponent({
   name: "Map",
-  components: { StopInfo },
+  components: { MapContextMenu, StopInfo },
   setup(): Setup {
     const store = useStore();
     const map = new Map();
@@ -118,6 +126,16 @@ export default {
       store.commit("nextBaseLayer", { numBaseLayers });
     }
 
+    function openContextMenu(event: any) {
+      const x = event.pageX;
+      const y = event.pageY;
+      store.commit("setMapContextMenuState", { open: true, x, y });
+    }
+
+    function closeContextMenu() {
+      store.commit("closeMapContextMenu");
+    }
+
     onMounted(() => {
       map.setTarget("map", "overview-map");
     });
@@ -131,10 +149,12 @@ export default {
       map,
       nextBaseLayerLabel,
       nextBaseLayer,
+      openContextMenu,
+      closeContextMenu,
       MAPBOX_WORDMARK_IMAGE_DATA,
     };
   },
-};
+});
 </script>
 
 <style scoped lang="scss">

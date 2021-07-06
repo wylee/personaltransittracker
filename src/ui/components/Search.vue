@@ -5,6 +5,7 @@
         type="text"
         title="Enter a stop ID or name"
         placeholder="Enter a stop ID or name"
+        autofocus
         v-model="term"
       />
 
