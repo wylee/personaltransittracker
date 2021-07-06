@@ -9,7 +9,7 @@ import Stroke from "ol/style/Stroke";
 
 const STOP_STYLE_CACHE: { [key: string]: Style } = {};
 
-export const STOP_STYLE = (feature: Feature, resolution: number) => {
+export const STOP_STYLE = (feature: Feature, resolution: number): Style => {
   const key = resolution.toString();
   if (typeof STOP_STYLE_CACHE[key] === "undefined") {
     let radius;

@@ -66,25 +66,36 @@
         <a href="https://www.mapbox.com/map-feedback/">Improve this map</a>
       </div>
     </div>
+
+    <StopInfo :map="map" />
   </div>
 </template>
 
 <script lang="ts">
 import { onMounted, onUnmounted } from "vue";
-
 import { MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import Map from "./map";
+import StopInfo from "./StopInfo.vue";
+
+interface Setup {
+  map: Map;
+  MAPBOX_WORDMARK_IMAGE_DATA: string;
+}
 
 export default {
   name: "Map",
-  setup(): { map: Map; MAPBOX_WORDMARK_IMAGE_DATA: string } {
+  components: { StopInfo },
+  setup(): Setup {
     const map = new Map();
+
     onMounted(() => {
       map.setTarget("map");
     });
+
     onUnmounted(() => {
       map.cleanup();
     });
+
     return { map, MAPBOX_WORDMARK_IMAGE_DATA };
   },
 };

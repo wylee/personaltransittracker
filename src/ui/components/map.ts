@@ -1,3 +1,5 @@
+import debounce from "lodash/debounce";
+
 import OLMap from "ol/Map";
 import View from "ol/View";
 
@@ -12,6 +14,8 @@ import VectorSource from "ol/source/Vector";
 import VectorTileSource from "ol/source/VectorTile";
 import XYZSource from "ol/source/XYZ";
 
+import Feature from "ol/Feature";
+
 import MVTFormat from "ol/format/MVT";
 
 import Collection from "ol/Collection";
@@ -22,8 +26,18 @@ import { DEBUG, API_URL, FEATURE_LAYER_MAX_RESOLUTION } from "../const";
 
 import { STOP_STYLE } from "./map-styles";
 
+type OnFeatureCallback = (
+  map: Map,
+  feature: Feature,
+  pixel: number[],
+  layer: BaseLayer,
+  event: any
+) => any;
+
+type NoFeatureCallback = (event: Event) => any;
+
 export default class Map {
-  private readonly olMap: OLMap;
+  private readonly map: OLMap;
   private readonly view: View;
   private readonly layers: BaseLayer[];
   private readonly baseLayers: TileLayer[];
@@ -75,49 +89,83 @@ export default class Map {
 
     this.layers = [...this.baseLayers, this.stopsLayer, this.userLocationLayer];
 
-    this.olMap = new OLMap({
+    this.map = new OLMap({
       controls: [],
       layers: this.layers,
       view: this.view,
     });
 
-    this.on("click", (event: any) => {
-      this.olMap.forEachFeatureAtPixel(
-        event.pixel,
-        (feature) => {
-          console.log(feature);
-          return true; // Only select one feature at a time
-        },
-        {
-          layerFilter: (layer) => {
-            return layer === this.stopsLayer;
-          },
-        }
-      );
-    });
+    // TODO: Add/remove stop ID to/from list and search
+    this.onFeature(
+      "click",
+      (map, feature, pixel) => {
+        console.log(feature, pixel);
+      },
+      undefined,
+      this.stopsLayer
+    );
+
+    // TODO: Show/hide stop info
   }
 
   on(type: string, listener: (event: Event) => any): EventsKey {
-    const key = this.olMap.on(type, listener) as EventsKey;
+    const key = this.map.on(type, listener) as EventsKey;
     this.listenerKeys.push(key);
     return key;
   }
 
   once(type: string, listener: (event: Event) => any): EventsKey {
-    const key = this.olMap.once(type, listener) as EventsKey;
+    const key = this.map.once(type, listener) as EventsKey;
     this.listenerKeys.push(key);
     return key;
   }
 
+  onFeature(
+    type: string,
+    featureCallback: OnFeatureCallback,
+    noFeatureCallback?: NoFeatureCallback,
+    onlyLayer?: BaseLayer,
+    debounceTime?: number
+  ): EventsKey {
+    const map = this.map;
+    let listener = (event: any) => {
+      const pixel = event.pixel;
+      const options = {
+        layerFilter: onlyLayer
+          ? (layer: any) => layer === onlyLayer
+          : undefined,
+      };
+      const feature = map.forEachFeatureAtPixel(
+        pixel,
+        (feature: any, layer: any) => {
+          featureCallback(this, feature, pixel, layer, event);
+          return feature;
+        },
+        options
+      );
+      if (!feature && noFeatureCallback) {
+        noFeatureCallback(event);
+      }
+    };
+    if (debounceTime) {
+      listener = debounce(listener, debounceTime);
+    }
+    return this.on(type, listener);
+  }
+
   setTarget(target: string): void {
-    this.olMap.setTarget(target);
+    this.map.setTarget(target);
   }
 
   cleanup(): void {
-    this.olMap.setTarget(undefined);
+    this.map.setTarget(undefined);
     this.listenerKeys.forEach((key) => {
       unByKey(key);
     });
+  }
+
+  getSize(): number[] {
+    return this.map.getSize() ?? [0, 0];
   }
 
   setCenter(center: number[]): void {
@@ -154,6 +202,14 @@ export default class Map {
         this.setZoom(zoom - 1);
       }
     }
+  }
+
+  getLayer(label: string): BaseLayer {
+    const layer = this.layers.find((layer) => layer.get("label") === label);
+    if (!layer) {
+      throw new Error();
+    }
+    return layer;
   }
 }
 
