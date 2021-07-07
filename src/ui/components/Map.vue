@@ -87,11 +87,20 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, onUnmounted, ref, Ref } from "vue";
-import { MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
+import { boundingExtent, containsExtent } from "ol/extent";
+import {
+  FEATURE_LAYER_MAX_RESOLUTION,
+  MAPBOX_WORDMARK_IMAGE_DATA,
+  GEOGRAPHIC_PROJECTION,
+  NATIVE_PROJECTION,
+} from "../const";
 import { useStore } from "../store";
 import Map from "./map";
+import { STOP_STYLE_SELECTED } from "./map-styles";
 import MapContextMenu from "./MapContextMenu.vue";
 import StopInfo from "./StopInfo.vue";
+import VectorLayer from "ol/layer/Vector";
+import { transformExtent } from "ol/proj";
 
 interface Setup {
   map: Map;
@@ -110,16 +119,61 @@ export default defineComponent({
     const map = new Map();
     const numBaseLayers = map.getBaseLayers().length;
     const nextBaseLayerLabel = ref(map.getNextBaseLayer().get("shortLabel"));
+    const stopsLayer = map.getLayer("Stops") as VectorLayer;
+    const stopsSource = stopsLayer.getSource();
+    const unsubscribers: (() => void)[] = [];
 
-    const unsubscribeFromStoreMutations = store.subscribe((mutation, state) => {
-      switch (mutation.type) {
-        case "setBaseLayer":
-        case "nextBaseLayer":
-          map.setBaseLayer(state.baseLayer);
+    unsubscribers.push(
+      store.watch(
+        (state) => state.baseLayer,
+        (baseLayer) => {
+          map.setBaseLayer(baseLayer);
           nextBaseLayerLabel.value = map.getNextBaseLayer().get("shortLabel");
-          break;
-      }
-    });
+        }
+      )
+    );
+
+    unsubscribers.push(
+      store.watch(
+        (state) => state.result,
+        (newResult, oldResult) => {
+          if (oldResult) {
+            oldResult.stops.forEach((stop: any) => {
+              const id = `stop.${stop.id}`;
+              const feature = stopsSource.getFeatureById(id);
+              if (feature) {
+                feature.setStyle(undefined);
+              }
+            });
+          }
+
+          if (newResult && newResult.stops.length) {
+            newResult.stops.forEach((stop: any) => {
+              const id = `stop.${stop.id}`;
+              const feature = stopsSource.getFeatureById(id);
+              if (feature) {
+                feature.setStyle(STOP_STYLE_SELECTED);
+              }
+            });
+
+            const newExtent = transformExtent(
+              boundingExtent(
+                newResult.stops.map((stop: any) => stop.coordinates)
+              ),
+              GEOGRAPHIC_PROJECTION,
+              NATIVE_PROJECTION
+            );
+
+            if (
+              !containsExtent(map.getExtent(), newExtent) ||
+              map.getResolution() > FEATURE_LAYER_MAX_RESOLUTION
+            ) {
+              map.setExtent(newExtent);
+            }
+          }
+        }
+      )
+    );
 
     function nextBaseLayer() {
       store.commit("nextBaseLayer", { numBaseLayers });
@@ -144,7 +198,7 @@ export default defineComponent({
           store.dispatch("search", { term: store.state.term });
         },
         undefined,
-        map.getLayer("Stops")
+        stopsLayer
       );
 
       map.setTarget("map", "overview-map");
@@ -152,7 +206,7 @@ export default defineComponent({
 
     onUnmounted(() => {
       map.cleanup();
-      unsubscribeFromStoreMutations();
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
     });
 
     return {

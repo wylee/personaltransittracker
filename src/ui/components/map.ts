@@ -16,13 +16,27 @@ import XYZSource from "ol/source/XYZ";
 
 import Feature from "ol/Feature";
 
+import GeoJSONFormat from "ol/format/GeoJSON";
 import MVTFormat from "ol/format/MVT";
 
 import Collection from "ol/Collection";
-import { EventsKey } from "ol/events";
+import { bbox as bboxLoadingStrategy } from "ol/loadingstrategy";
 import { unByKey } from "ol/Observable";
+import { transformExtent } from "ol/proj";
 
-import { DEBUG, API_URL, FEATURE_LAYER_MAX_RESOLUTION } from "../const";
+// Types
+import { EventsKey } from "ol/events";
+import { Extent } from "ol/extent";
+import { Coordinate } from "ol/coordinate";
+import { Size } from "ol/size";
+
+import {
+  DEBUG,
+  API_URL,
+  FEATURE_LAYER_MAX_RESOLUTION,
+  GEOGRAPHIC_PROJECTION,
+  NATIVE_PROJECTION,
+} from "../const";
 
 import { STOP_STYLE } from "./map-styles";
 
@@ -42,7 +56,7 @@ export default class Map {
   private readonly layers: BaseLayer[];
   private readonly baseLayers: TileLayer[];
   private baseLayer = 0;
-  private readonly stopsLayer: VectorTileLayer;
+  private readonly stopsLayer: VectorLayer;
   private readonly userLocationLayer: VectorLayer;
   private listenerKeys: EventsKey[] = [];
   private overviewMap: OLMap;
@@ -78,7 +92,7 @@ export default class Map {
       this.baseLayers.unshift(makeDebugLayer());
     }
 
-    this.stopsLayer = makeMVTLayer("Stops", "stops/mvt", {
+    this.stopsLayer = makeGeoJSONLayer("Stops", "stops/geojson", {
       visible: true,
       style: STOP_STYLE,
     });
@@ -183,23 +197,23 @@ export default class Map {
     });
   }
 
-  getSize(): number[] {
+  getSize(): Size {
     return this.map.getSize() ?? [0, 0];
   }
 
-  getCoordinateFromPixel(pixel: number[]): number[] {
+  getCoordinateFromPixel(pixel: number[]): Coordinate {
     return this.map.getCoordinateFromPixel(pixel);
   }
 
-  getCenter(): number[] | undefined {
+  getCenter(): Coordinate | undefined {
     return this.view.getCenter();
   }
 
-  setCenter(center: number[]): void {
+  setCenter(center: Coordinate): void {
     this.view.animate({ center, duration: this.animationDuration });
   }
 
-  setCenterAndZoom(center: number[], zoom: number): void {
+  setCenterAndZoom(center: Coordinate, zoom: number): void {
     this.view.animate({ center, zoom, duration: this.animationDuration });
   }
 
@@ -233,6 +247,18 @@ export default class Map {
         this.setZoom(zoom - 1);
       }
     }
+  }
+
+  getResolution(): number {
+    return this.view.getResolution() ?? 0;
+  }
+
+  getExtent(): Extent {
+    return this.view.calculateExtent(this.getSize());
+  }
+
+  setExtent(extent: Extent, padding = [40, 40, 40, 40]): void {
+    this.view.fit(extent, { padding, duration: this.animationDuration });
   }
 
   getBaseLayers(): BaseLayer[] {
@@ -311,6 +337,33 @@ function makeDebugLayer(visible = true): TileLayer {
   return layer;
 }
 
+function makeGeoJSONLayer(
+  label: string,
+  path: string,
+  options: any = {}
+): VectorLayer {
+  const url = `${API_URL}/${path}`;
+  const source = new VectorSource({
+    strategy: bboxLoadingStrategy,
+    format: new GeoJSONFormat(),
+    url: (extent) => {
+      const bbox = transformExtent(
+        extent,
+        NATIVE_PROJECTION,
+        GEOGRAPHIC_PROJECTION
+      ).join(",");
+      return `${url}?bbox=${bbox}`;
+    },
+  });
+  options.maxResolution = options.maxResolution || FEATURE_LAYER_MAX_RESOLUTION;
+  options.projection = options.projection || GEOGRAPHIC_PROJECTION;
+  const layer = new VectorLayer({ source, ...options });
+  layer.set("label", label);
+  return layer;
+}
+
+// XXX:
+// eslint-disable-next-line
 function makeMVTLayer(
   label: string,
   path: string,

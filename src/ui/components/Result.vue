@@ -29,7 +29,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { defineComponent, onUnmounted, ref } from "vue";
 import { useStore } from "../store";
 
@@ -39,18 +39,18 @@ export default defineComponent({
   setup() {
     const store = useStore();
     const result = ref();
+    const unsubscribers: (() => void)[] = [];
 
-    const unsubscribeFromStoreMutations = store.subscribe((mutation, state) => {
-      switch (mutation.type) {
-        case "setResult":
-        case "setSearchState":
-        case "resetSearchState":
-          result.value = state.result;
-          break;
-      }
-    });
+    unsubscribers.push(
+      store.watch(
+        (state) => state.result,
+        (newResult) => {
+          result.value = newResult;
+        }
+      )
+    );
 
-    function milesAway(arrival) {
+    function milesAway(arrival: any) {
       const {
         distanceAway: { miles, feet },
       } = arrival;
@@ -65,7 +65,7 @@ export default defineComponent({
       return `${miles.toFixed(1)} mile${ess} away`;
     }
 
-    function kilometersAway(arrival) {
+    function kilometersAway(arrival: any) {
       const {
         distanceAway: { kilometers, meters },
       } = arrival;
@@ -79,7 +79,7 @@ export default defineComponent({
     }
 
     onUnmounted(() => {
-      unsubscribeFromStoreMutations();
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
     });
 
     return {
