@@ -55,7 +55,7 @@ SELECT
   ST_AsMVT(q, 'stops')
 FROM (
   SELECT
-    'stops.' || stop.stop_id::text AS feature_id,
+    'stop.' || stop.stop_id::text AS feature_id,
     stop.stop_id AS id,
     stop.name,
     stop.direction,
