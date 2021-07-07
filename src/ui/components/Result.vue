@@ -30,7 +30,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onUnmounted, ref } from "vue";
+import { defineComponent, computed } from "vue";
 import { useStore } from "../store";
 
 export default defineComponent({
@@ -38,17 +38,7 @@ export default defineComponent({
 
   setup() {
     const store = useStore();
-    const result = ref();
-    const unsubscribers: (() => void)[] = [];
-
-    unsubscribers.push(
-      store.watch(
-        (state) => state.result,
-        (newResult) => {
-          result.value = newResult;
-        }
-      )
-    );
+    const result = computed(() => store.state.result);
 
     function milesAway(arrival: any) {
       const {
@@ -78,15 +68,7 @@ export default defineComponent({
       return `${kilometers.toFixed(1)} km away`;
     }
 
-    onUnmounted(() => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    });
-
-    return {
-      result,
-      milesAway,
-      kilometersAway,
-    };
+    return { result, milesAway, kilometersAway };
   },
 });
 </script>

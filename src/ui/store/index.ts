@@ -41,20 +41,22 @@ export function useStore(): Store<State> {
 
 export const store = createStore<State>({
   strict: process.env.NODE_ENV !== "production",
-  state: {
-    menuOpen: false,
-    term: "",
-    stops: [],
-    result: null,
-    error: null,
-    cancelTokenSource: undefined,
-    timeoutID: undefined,
-    baseLayer: 0,
-    mapContextMenu: {
-      open: false,
-      x: 0,
-      y: 0,
-    },
+  state() {
+    return {
+      menuOpen: false,
+      term: "",
+      stops: [],
+      result: null,
+      error: null,
+      cancelTokenSource: undefined,
+      timeoutID: undefined,
+      baseLayer: 0,
+      mapContextMenu: {
+        open: false,
+        x: 0,
+        y: 0,
+      },
+    };
   },
   mutations: {
     openMenu(state) {

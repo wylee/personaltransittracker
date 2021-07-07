@@ -87,35 +87,28 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
-import { mapState, mapMutations } from "vuex";
-import { DEBUG } from "../const";
+import { defineComponent, computed } from "vue";
+import { BASE_LAYER_LABELS } from "../const";
+import { useStore } from "../store";
 
 export default defineComponent({
   name: "Menu",
-  data() {
-    const layers = ["Map", "Satellite", "OpenStreetMap"];
-    if (DEBUG) {
-      layers.unshift("Debug");
-    }
+  setup() {
+    const store = useStore();
     return {
-      layers,
-    };
-  },
-  computed: {
-    ...mapState(["menuOpen", "baseLayer"]),
-    ...mapState({
-      buttonTitle: (state: any) => {
-        return state.menuOpen ? "Close menu" : "Open menu";
+      menuOpen: computed(() => store.state.menuOpen),
+      buttonTitle: computed(() =>
+        store.state.menuOpen ? "Close menu" : "Open menu"
+      ),
+      layers: BASE_LAYER_LABELS,
+      baseLayer: computed(() => store.state.baseLayer),
+      setBaseLayer: (baseLayer: number) => {
+        store.commit("setBaseLayer", { baseLayer });
+        store.commit("closeMenu");
       },
-    }),
-  },
-  methods: {
-    setBaseLayer(baseLayer: number) {
-      this.$store.commit("setBaseLayer", { baseLayer });
-      this.$store.commit("closeMenu");
-    },
-    ...mapMutations(["closeMenu", "toggleMenu"]),
+      closeMenu: () => store.commit("closeMenu"),
+      toggleMenu: () => store.commit("toggleMenu"),
+    };
   },
 });
 </script>

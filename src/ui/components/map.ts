@@ -259,8 +259,16 @@ export default class Map {
     return this.view.calculateExtent(this.getSize());
   }
 
-  setExtent(extent: Extent, padding = [40, 40, 40, 40]): void {
-    this.view.fit(extent, { padding, duration: this.animationDuration });
+  setExtent(
+    extent: Extent,
+    callback?: (completed: boolean) => any,
+    padding = [64, 64, 64, 64]
+  ): void {
+    this.view.fit(extent, {
+      callback,
+      padding,
+      duration: this.animationDuration,
+    });
   }
 
   containsExtent(extent: Extent): boolean {

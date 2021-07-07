@@ -33,46 +33,33 @@
   </div>
 </template>
 
-<script>
-import { defineComponent } from "vue";
-import { mapState } from "vuex";
+<script lang="ts">
+import { defineComponent, computed, ref } from "vue";
+import { useStore } from "../store";
 import Result from "./Result.vue";
 
 export default defineComponent({
   name: "Search",
   components: { Result },
-  data() {
-    return {
-      internalTerm: null,
-    };
-  },
-  computed: {
-    term: {
-      get() {
-        return this.internalTerm ?? this.$store.state.term;
-      },
-      set(value) {
-        if (!value) {
-          this.reset();
-        } else {
-          this.internalTerm = value;
-        }
-      },
-    },
-    ...mapState(["error"]),
-  },
-  methods: {
-    search() {
-      // XXX: The search action will re-set the search term, which will
-      //      cause the internal term here to be re-set too.
-      const term = this.term;
-      this.internalTerm = null;
-      this.$store.dispatch("search", { term });
-    },
-    reset() {
-      this.internalTerm = null;
-      this.$store.commit("resetSearchState");
-    },
+  setup() {
+    const store = useStore();
+    const error = computed(() => store.state.error);
+    const internalTerm = ref<string | null>(null);
+    const term = computed({
+      get: () => internalTerm.value ?? store.state.term,
+      set: (value: any) => (value ? (internalTerm.value = value) : reset()),
+    });
+    function search() {
+      const searchTerm = term.value;
+      // XXX: The search action will normalize & re-set the search term.
+      internalTerm.value = null;
+      store.dispatch("search", { term: searchTerm });
+    }
+    function reset() {
+      internalTerm.value = null;
+      store.commit("resetSearchState");
+    }
+    return { term, error, reset, search };
   },
 });
 </script>

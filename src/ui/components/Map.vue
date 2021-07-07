@@ -1,9 +1,5 @@
 <template>
-  <div
-    id="map"
-    @click="closeContextMenu"
-    @contextmenu.prevent.stop="openContextMenu"
-  >
+  <div id="map" @click="onClick" @contextmenu.prevent.stop="openContextMenu">
     <div class="controls bottom-left column" @contextmenu.stop="">
       <div class="mapbox-wordmark">
         <a
@@ -14,7 +10,6 @@
         </a>
       </div>
 
-      <!-- overview map/switcher -->
       <div id="overview-map" title="Change base map" @click="nextBaseLayer()">
         <div class="label">{{ nextBaseLayerLabel }}</div>
       </div>
@@ -80,13 +75,13 @@
       </div>
     </div>
 
-    <MapContextMenu :map="map" />
-    <StopInfo :map="map" />
+    <map-context-menu :map="map" />
+    <stop-info :map="map" />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, onUnmounted, ref, Ref } from "vue";
+import { defineComponent, onMounted, onUnmounted, ref } from "vue";
 import { STREET_LEVEL_ZOOM, MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
@@ -95,19 +90,10 @@ import MapContextMenu from "./MapContextMenu.vue";
 import StopInfo from "./StopInfo.vue";
 import VectorLayer from "ol/layer/Vector";
 
-interface Setup {
-  map: Map;
-  nextBaseLayerLabel: Ref<string>;
-  nextBaseLayer: () => void;
-  openContextMenu: (event: any) => void;
-  closeContextMenu: () => void;
-  MAPBOX_WORDMARK_IMAGE_DATA: string;
-}
-
 export default defineComponent({
   name: "Map",
   components: { MapContextMenu, StopInfo },
-  setup(): Setup {
+  setup() {
     const store = useStore();
     const map = new Map();
     const numBaseLayers = map.getBaseLayers().length;
@@ -143,18 +129,24 @@ export default defineComponent({
             const stops = newResult.stops;
             const newExtent = map.extentOf(stops, true);
 
-            stops.forEach((stop: any) => {
-              const feature = stopsSource.getFeatureById(`stop.${stop.id}`);
-              if (feature) {
-                feature.setStyle(STOP_STYLE_SELECTED);
-              }
-            });
+            const setStyle = () => {
+              stops.forEach((stop: any) => {
+                const feature = stopsSource.getFeatureById(`stop.${stop.id}`);
+                if (feature) {
+                  feature.setStyle(STOP_STYLE_SELECTED);
+                }
+              });
+            };
 
             if (
               !map.containsExtent(newExtent) ||
               map.getZoom() < STREET_LEVEL_ZOOM
             ) {
-              map.setExtent(newExtent);
+              map.setExtent(newExtent, () =>
+                map.once("rendercomplete", setStyle)
+              );
+            } else {
+              setStyle();
             }
           }
         }
@@ -165,14 +157,14 @@ export default defineComponent({
       store.commit("nextBaseLayer", { numBaseLayers });
     }
 
-    function openContextMenu(event: any) {
+    function onClick() {
+      store.commit("closeMapContextMenu");
+    }
+
+    function onContextMenu(event: any) {
       const x = event.pageX;
       const y = event.pageY;
       store.commit("setMapContextMenuState", { open: true, x, y });
-    }
-
-    function closeContextMenu() {
-      store.commit("closeMapContextMenu");
     }
 
     onMounted(() => {
@@ -180,10 +172,15 @@ export default defineComponent({
         "click",
         (map, feature) => {
           const stopID = feature.get("id");
+          if (store.state.error) {
+            store.commit("resetSearchState");
+          }
           store.commit("toggleStopID", { stopID });
           store.dispatch("search", { term: store.state.term });
         },
-        undefined,
+        () => {
+          store.commit("resetSearchState");
+        },
         stopsLayer
       );
 
@@ -199,8 +196,8 @@ export default defineComponent({
       map,
       nextBaseLayerLabel,
       nextBaseLayer,
-      openContextMenu,
-      closeContextMenu,
+      onClick,
+      onContextMenu,
       MAPBOX_WORDMARK_IMAGE_DATA,
     };
   },
