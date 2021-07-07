@@ -20,14 +20,12 @@ import GeoJSONFormat from "ol/format/GeoJSON";
 import MVTFormat from "ol/format/MVT";
 
 import Collection from "ol/Collection";
+import { Coordinate } from "ol/coordinate";
+import { EventsKey } from "ol/events";
+import { boundingExtent, containsExtent, Extent } from "ol/extent";
 import { bbox as bboxLoadingStrategy } from "ol/loadingstrategy";
 import { unByKey } from "ol/Observable";
 import { transformExtent } from "ol/proj";
-
-// Types
-import { EventsKey } from "ol/events";
-import { boundingExtent, Extent } from "ol/extent";
-import { Coordinate } from "ol/coordinate";
 import { Size } from "ol/size";
 
 import {
@@ -263,6 +261,10 @@ export default class Map {
 
   setExtent(extent: Extent, padding = [40, 40, 40, 40]): void {
     this.view.fit(extent, { padding, duration: this.animationDuration });
+  }
+
+  containsExtent(extent: Extent): boolean {
+    return containsExtent(this.getExtent(), extent);
   }
 
   extentOf(items: { coordinates: number[] }[], transform = false): Extent {

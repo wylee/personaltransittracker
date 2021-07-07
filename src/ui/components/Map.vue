@@ -87,13 +87,7 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, onUnmounted, ref, Ref } from "vue";
-import { boundingExtent, containsExtent } from "ol/extent";
-import {
-  STREET_LEVEL_ZOOM,
-  GEOGRAPHIC_PROJECTION,
-  NATIVE_PROJECTION,
-  MAPBOX_WORDMARK_IMAGE_DATA,
-} from "../const";
+import { STREET_LEVEL_ZOOM, MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
 import { STOP_STYLE_SELECTED } from "./map-styles";
@@ -138,8 +132,7 @@ export default defineComponent({
         (newResult, oldResult) => {
           if (oldResult) {
             oldResult.stops.forEach((stop: any) => {
-              const id = `stop.${stop.id}`;
-              const feature = stopsSource.getFeatureById(id);
+              const feature = stopsSource.getFeatureById(`stop.${stop.id}`);
               if (feature) {
                 feature.setStyle(undefined);
               }
@@ -151,15 +144,14 @@ export default defineComponent({
             const newExtent = map.extentOf(stops, true);
 
             stops.forEach((stop: any) => {
-              const id = `stop.${stop.id}`;
-              const feature = stopsSource.getFeatureById(id);
+              const feature = stopsSource.getFeatureById(`stop.${stop.id}`);
               if (feature) {
                 feature.setStyle(STOP_STYLE_SELECTED);
               }
             });
 
             if (
-              !containsExtent(map.getExtent(), newExtent) ||
+              !map.containsExtent(newExtent) ||
               map.getZoom() < STREET_LEVEL_ZOOM
             ) {
               map.setExtent(newExtent);
