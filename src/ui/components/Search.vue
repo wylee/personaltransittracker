@@ -28,15 +28,19 @@
         close
       </button>
     </form>
+
+    <Result />
   </div>
 </template>
 
 <script>
 import { defineComponent } from "vue";
 import { mapState } from "vuex";
+import Result from "./Result.vue";
 
 export default defineComponent({
   name: "Search",
+  components: { Result },
   data() {
     return {
       internalTerm: null,
@@ -127,77 +131,6 @@ export default defineComponent({
       left: $quarter-standard-spacing;
       right: $quarter-standard-spacing;
       width: auto;
-    }
-  }
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding-left: 0;
-  }
-
-  #result {
-    animation: fade-in 0.75s;
-    max-height: 400px;
-    overflow-x: hidden;
-  }
-
-  ul.stops {
-    background-color: white;
-    box-shadow: 2px 2px 4px;
-    padding-top: 40px + $twice-standard-spacing;
-
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-
-    > li.updateTime {
-      border-top: 1px solid $menu-item-border-color;
-      padding: $half-standard-spacing $standard-spacing;
-      text-align: right;
-    }
-
-    > li.stop {
-      > .heading {
-        background-color: #e0e0e0;
-        border-top: 1px solid #a0a0a0;
-        border-bottom: 1px solid #a0a0a0;
-        font-size: 105%;
-        font-weight: bold;
-        padding: $half-standard-spacing $standard-spacing;
-      }
-
-      > ul.routes {
-        > li.route {
-          border-bottom: 1px solid $menu-item-border-color;
-          padding: $half-standard-spacing $standard-spacing;
-
-          &:last-child {
-            border-bottom: none;
-          }
-
-          > .heading {
-            font-weight: bold;
-          }
-
-          > ul.arrivals {
-            > li.arrival {
-              display: flex;
-              flex-direction: row;
-              padding: $quarter-standard-spacing 0;
-              > div {
-                flex: 50%;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    @media (max-width: $xs-width - 1) {
-      padding-top: 40px + $half-standard-spacing;
-      width: 100%;
     }
   }
 

@@ -1,10 +1,10 @@
 <template>
   <ul id="map-context-menu" v-if="open" :style="{ ...style }">
     <li>
-      <a href="" @click.prevent="centerMap">Center map here</a>
+      <a href="" @click.prevent="setCenter">Center map here</a>
     </li>
     <li>
-      <a href="">Zoom in here</a>
+      <a href="" @click.prevent="setCenterAndZoom">Zoom in here</a>
     </li>
   </ul>
 </template>
@@ -16,24 +16,40 @@ import Map from "./map";
 
 export default defineComponent({
   name: "MapContextMenu",
+
   props: {
     map: {
       type: Map,
       required: true,
     },
   },
+
   setup(props) {
     const store = useStore();
     const open = computed(() => store.state.mapContextMenu.open);
     const style = computed(() => {
       return getStyle(props.map, store.state.mapContextMenu);
     });
-    function centerMap() {
+
+    function getCoordinate() {
       const { x, y } = store.state.mapContextMenu;
-      const center = props.map.getCoordinateFromPixel([x, y]);
-      props.map.setCenter(center);
+      return props.map.getCoordinateFromPixel([x, y]);
     }
-    return { open, style, centerMap };
+
+    function setCenter() {
+      props.map.setCenter(getCoordinate());
+    }
+
+    function setCenterAndZoom() {
+      const center = getCoordinate();
+      if (props.map.getZoom() > 17) {
+        props.map.setCenter(center);
+      } else {
+        props.map.setCenterAndZoom(center, 17);
+      }
+    }
+
+    return { open, style, centerMap: setCenter, setCenterAndZoom };
   },
 });
 
@@ -92,6 +108,6 @@ function getStyle(map: Map, state: { open: boolean; x: number; y: number }) {
   position: absolute;
   z-index: 13;
 
-  animation: fade-in 0.75s;
+  animation: fade-in 0.5s;
 }
 </style>

@@ -12,4 +12,4 @@ import "./ui/assets/global.scss";
 axios.defaults.headers.common["Accept"] = "application/json";
 axios.defaults.validateStatus = (status) => status >= 200 && status < 400;
 
-createApp(App).use(store, key).use(router).mount("#app");
+createApp(App).use(store, key).use(router).mount("#root");

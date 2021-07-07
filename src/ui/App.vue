@@ -1,30 +1,23 @@
 <template>
-  <header>
-    <h1 id="title">MyStops</h1>
-  </header>
-  <router-view />
+  <div id="app" @click="onClick" @contextmenu="onContextMenu">
+    <header>
+      <h1 id="title">MyStops</h1>
+    </header>
+    <router-view />
+  </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, onUnmounted } from "vue";
+import { defineComponent } from "vue";
 import { useStore } from "./store";
 
 export default defineComponent({
   setup() {
     const store = useStore();
-    function onClick() {
-      store.commit("closeMapContextMenu");
-    }
-    onMounted(() => {
-      const el = document.getElementById("app") as HTMLElement;
-      el.addEventListener("click", onClick);
-      el.addEventListener("contextmenu", onClick);
-    });
-    onUnmounted(() => {
-      const el = document.getElementById("app") as HTMLElement;
-      el.removeEventListener("click", onClick);
-      el.removeEventListener("contextmenu", onClick);
-    });
+    return {
+      onClick: () => store.commit("closeMapContextMenu"),
+      onContextMenu: () => store.commit("closeMapContextMenu"),
+    };
   },
 });
 </script>

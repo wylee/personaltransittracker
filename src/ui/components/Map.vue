@@ -118,7 +118,6 @@ export default defineComponent({
           map.setBaseLayer(state.baseLayer);
           nextBaseLayerLabel.value = map.getNextBaseLayer().get("shortLabel");
           break;
-        default:
       }
     });
 
@@ -137,6 +136,17 @@ export default defineComponent({
     }
 
     onMounted(() => {
+      map.onFeature(
+        "click",
+        (map, feature) => {
+          const stopID = feature.get("id");
+          store.commit("toggleStopID", { stopID });
+          store.dispatch("search", { term: store.state.term });
+        },
+        undefined,
+        map.getLayer("Stops")
+      );
+
       map.setTarget("map", "overview-map");
     });
 

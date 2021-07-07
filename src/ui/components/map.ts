@@ -123,16 +123,6 @@ export default class Map {
         .getView()
         .animate({ center: this.getCenter(), duration: 200 });
     });
-
-    // TODO: Add/remove stop ID to/from list and search
-    this.onFeature(
-      "click",
-      (map, feature, pixel) => {
-        console.log(feature, pixel);
-      },
-      undefined,
-      this.stopsLayer
-    );
   }
 
   on(type: string, listener: (event: Event) => any): EventsKey {
@@ -215,6 +205,10 @@ export default class Map {
 
   setInitialCenterAndZoom(): void {
     this.setCenterAndZoom(this.initialCenter, this.initialZoom);
+  }
+
+  getZoom(): number {
+    return this.view.getZoom() ?? 0;
   }
 
   setZoom(zoom: number): void {

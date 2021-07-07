@@ -1,9 +1,9 @@
 import { InjectionKey } from "vue";
 import { createStore, useStore as baseUseStore, Store } from "vuex";
 
-import axios from "axios";
+import axios, { CancelTokenSource } from "axios";
 
-import { ARRIVALS_URL } from "../const";
+import { ARRIVALS_URL, REFRESH_INTERVAL } from "../const";
 
 type Result = any;
 
@@ -25,6 +25,7 @@ export interface State {
   stops: number[];
   result: Result | null;
   error: Error | null;
+  cancelTokenSource: CancelTokenSource | undefined;
   timeoutID: number | undefined;
   baseLayer: number;
   mapContextMenu: MapContextMenuState;
@@ -46,6 +47,7 @@ export const store = createStore<State>({
     stops: [],
     result: null,
     error: null,
+    cancelTokenSource: undefined,
     timeoutID: undefined,
     baseLayer: 0,
     mapContextMenu: {
@@ -67,26 +69,68 @@ export const store = createStore<State>({
     setSearchTerm(state, payload: { term: string }) {
       state.term = payload.term;
     },
+    toggleStopID(state, payload: { stopID: number }) {
+      // Add stop ID to search term if it's not already present;
+      // remove it if it is.
+      const stopIDs = termToStopIDs(state.term);
+      const newID = termToStopIDs(payload.stopID.toString())[0];
+      const index = stopIDs.indexOf(newID);
+      if (index === -1) {
+        stopIDs.push(newID);
+      } else {
+        stopIDs.splice(index, 1);
+      }
+      stopIDs.sort((a, b) => a - b);
+      state.term = stopIDs.join(", ");
+    },
     setStops(state, payload: { stops: number[] }) {
       state.stops = payload.stops;
     },
+    setResult(state, payload: { result: Result }) {
+      state.result = payload.result;
+    },
     setSearchState(
       state,
-      payload: { term: string; stops?: number[]; error?: Error }
+      payload: {
+        term: string;
+        stops?: number[];
+        result?: Result;
+        error?: Error;
+        cancelTokenSource?: undefined;
+        timeoutID?: undefined;
+      }
     ) {
       state.term = payload.term;
       state.stops = payload.stops ?? termToStopIDs(payload.term);
+      state.result = payload.result ?? null;
       state.error = payload.error ?? null;
+      state.cancelTokenSource = payload.cancelTokenSource;
+      state.timeoutID = payload.timeoutID;
     },
     resetSearchState(state) {
+      if (state.cancelTokenSource) {
+        state.cancelTokenSource.cancel();
+      }
+      clearTimeout(state.timeoutID);
       state.term = "";
       state.stops = [];
+      state.result = null;
       state.error = null;
-      clearTimeout(state.timeoutID);
+      state.cancelTokenSource = undefined;
       state.timeoutID = undefined;
     },
     setError(state, payload: { error: Error }) {
       state.error = payload.error;
+    },
+    setCancelTokenSource(state, payload?: { source: CancelTokenSource }) {
+      if (state.cancelTokenSource) {
+        state.cancelTokenSource.cancel();
+      }
+      state.cancelTokenSource = payload?.source;
+    },
+    setTimeoutID(state, payload?: { timeoutID: number }) {
+      clearTimeout(state.timeoutID);
+      state.timeoutID = payload?.timeoutID;
     },
     setBaseLayer(state, payload: { baseLayer: number }) {
       state.baseLayer = payload.baseLayer;
@@ -97,13 +141,15 @@ export const store = createStore<State>({
     setMapContextMenuState(state, payload: MapContextMenuState) {
       state.mapContextMenu = payload;
     },
-    closeMapContextMenu(state, payload) {
+    closeMapContextMenu(state) {
       state.mapContextMenu = { open: false, x: 0, y: 0 };
     },
   },
   actions: {
-    search({ commit }, payload: { term: string }) {
+    search({ commit, dispatch }, payload: { term: string }) {
       let { term } = payload;
+
+      commit("resetSearchState");
 
       if (!term.trim()) {
         commit("setSearchTerm", { term });
@@ -127,19 +173,26 @@ export const store = createStore<State>({
         return;
       }
 
+      const cancelTokenSource = axios.CancelToken.source();
+
       term = stops.join(", ");
-      commit("setSearchState", { term, stops });
+      commit("setSearchState", { term, stops, cancelTokenSource });
 
       return axios
         .get(ARRIVALS_URL, {
           params: { q: stops.join(",") },
+          cancelToken: cancelTokenSource.token,
         })
         .then((response) => {
-          console.log(response);
           const result = response.data;
-          const { count } = result;
-          if (count) {
-            console.log("Num arrivals:", count);
+          if (result.count) {
+            commit("setResult", { result: result });
+            commit("setTimeoutID", {
+              timeoutID: setTimeout(
+                () => dispatch("search", { term }),
+                REFRESH_INTERVAL
+              ),
+            });
           }
         })
         .catch((error) => {
