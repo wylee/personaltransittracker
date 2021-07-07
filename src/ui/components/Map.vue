@@ -89,10 +89,10 @@
 import { defineComponent, onMounted, onUnmounted, ref, Ref } from "vue";
 import { boundingExtent, containsExtent } from "ol/extent";
 import {
-  FEATURE_LAYER_MAX_RESOLUTION,
-  MAPBOX_WORDMARK_IMAGE_DATA,
+  STREET_LEVEL_ZOOM,
   GEOGRAPHIC_PROJECTION,
   NATIVE_PROJECTION,
+  MAPBOX_WORDMARK_IMAGE_DATA,
 } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
@@ -100,7 +100,6 @@ import { STOP_STYLE_SELECTED } from "./map-styles";
 import MapContextMenu from "./MapContextMenu.vue";
 import StopInfo from "./StopInfo.vue";
 import VectorLayer from "ol/layer/Vector";
-import { transformExtent } from "ol/proj";
 
 interface Setup {
   map: Map;
@@ -148,7 +147,10 @@ export default defineComponent({
           }
 
           if (newResult && newResult.stops.length) {
-            newResult.stops.forEach((stop: any) => {
+            const stops = newResult.stops;
+            const newExtent = map.extentOf(stops, true);
+
+            stops.forEach((stop: any) => {
               const id = `stop.${stop.id}`;
               const feature = stopsSource.getFeatureById(id);
               if (feature) {
@@ -156,17 +158,9 @@ export default defineComponent({
               }
             });
 
-            const newExtent = transformExtent(
-              boundingExtent(
-                newResult.stops.map((stop: any) => stop.coordinates)
-              ),
-              GEOGRAPHIC_PROJECTION,
-              NATIVE_PROJECTION
-            );
-
             if (
               !containsExtent(map.getExtent(), newExtent) ||
-              map.getResolution() > FEATURE_LAYER_MAX_RESOLUTION
+              map.getZoom() < STREET_LEVEL_ZOOM
             ) {
               map.setExtent(newExtent);
             }

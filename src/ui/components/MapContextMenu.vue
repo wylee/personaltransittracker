@@ -11,6 +11,7 @@
 
 <script lang="ts">
 import { defineComponent, computed } from "vue";
+import { STREET_LEVEL_ZOOM } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
 
@@ -42,14 +43,14 @@ export default defineComponent({
 
     function setCenterAndZoom() {
       const center = getCoordinate();
-      if (props.map.getZoom() > 17) {
+      if (props.map.getZoom() > STREET_LEVEL_ZOOM) {
         props.map.setCenter(center);
       } else {
-        props.map.setCenterAndZoom(center, 17);
+        props.map.setCenterAndZoom(center, STREET_LEVEL_ZOOM);
       }
     }
 
-    return { open, style, centerMap: setCenter, setCenterAndZoom };
+    return { open, style, setCenter, setCenterAndZoom };
   },
 });
 

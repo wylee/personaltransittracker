@@ -26,14 +26,18 @@ import { transformExtent } from "ol/proj";
 
 // Types
 import { EventsKey } from "ol/events";
-import { Extent } from "ol/extent";
+import { boundingExtent, Extent } from "ol/extent";
 import { Coordinate } from "ol/coordinate";
 import { Size } from "ol/size";
 
 import {
   DEBUG,
   API_URL,
-  FEATURE_LAYER_MAX_RESOLUTION,
+  INITIAL_CENTER,
+  INITIAL_ZOOM,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  FEATURE_LAYER_MIN_ZOOM,
   GEOGRAPHIC_PROJECTION,
   NATIVE_PROJECTION,
 } from "../const";
@@ -63,10 +67,10 @@ export default class Map {
   private overviewMapBaseLayers: BaseLayer[];
 
   constructor(
-    private initialCenter: number[] = [-13655274.508685641, 5704240.981993447],
-    private initialZoom: number = 14,
-    private minZoom: number = 4,
-    private maxZoom: number = 19,
+    private initialCenter: number[] = INITIAL_CENTER,
+    private initialZoom: number = INITIAL_ZOOM,
+    private minZoom: number = MIN_ZOOM,
+    private maxZoom: number = MAX_ZOOM,
     private animationDuration: number = 250
   ) {
     this.view = new View({
@@ -261,6 +265,14 @@ export default class Map {
     this.view.fit(extent, { padding, duration: this.animationDuration });
   }
 
+  extentOf(items: { coordinates: number[] }[], transform = false): Extent {
+    const extent = boundingExtent(items.map((stop: any) => stop.coordinates));
+    if (transform) {
+      return transformExtent(extent, GEOGRAPHIC_PROJECTION, NATIVE_PROJECTION);
+    }
+    return extent;
+  }
+
   getBaseLayers(): BaseLayer[] {
     return this.baseLayers;
   }
@@ -355,7 +367,7 @@ function makeGeoJSONLayer(
       return `${url}?bbox=${bbox}`;
     },
   });
-  options.maxResolution = options.maxResolution || FEATURE_LAYER_MAX_RESOLUTION;
+  options.minZoom = options.minZoom || FEATURE_LAYER_MIN_ZOOM;
   options.projection = options.projection || GEOGRAPHIC_PROJECTION;
   const layer = new VectorLayer({ source, ...options });
   layer.set("label", label);
@@ -376,7 +388,8 @@ function makeMVTLayer(
       idProperty: "feature_id",
     }),
   });
-  options.maxResolution = options.maxResolution || FEATURE_LAYER_MAX_RESOLUTION;
+  options.minZoom = options.minZoom || FEATURE_LAYER_MIN_ZOOM;
+  options.projection = options.projection || NATIVE_PROJECTION;
   const layer = new VectorTileLayer({
     source,
     renderOrder: null,

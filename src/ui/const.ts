@@ -1,11 +1,16 @@
-import { get as getProjection } from "ol/proj";
+import { fromLonLat, get as getProjection } from "ol/proj";
 
 export const DEBUG = process.env.VUE_APP_DEBUG;
 export const API_URL = process.env.VUE_APP_API_URL;
 export const ARRIVALS_URL = `${API_URL}/arrivals/`;
 export const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
-export const FEATURE_LAYER_MAX_RESOLUTION = 100;
+export const INITIAL_CENTER = fromLonLat([-122.667418, 45.523029]);
+export const INITIAL_ZOOM = 13;
+export const MIN_ZOOM = 8;
+export const MAX_ZOOM = 20;
+export const STREET_LEVEL_ZOOM = 17;
+export const FEATURE_LAYER_MIN_ZOOM = 10;
 export const GEOGRAPHIC_PROJECTION = getProjection("EPSG:4326");
 export const NATIVE_PROJECTION = getProjection("EPSG:3857");
 
