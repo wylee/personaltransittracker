@@ -79,3 +79,13 @@ export const USER_LOCATION_STYLE = new Style({
     }),
   }),
 });
+
+export const USER_LOCATION_ACCURACY_STYLE = new Style({
+  fill: new Fill({
+    color: "rgba(255, 10, 32, 0.15)",
+  }),
+  stroke: new Stroke({
+    color: "rgba(255, 10, 32, 0.75)",
+    width: 1,
+  }),
+});

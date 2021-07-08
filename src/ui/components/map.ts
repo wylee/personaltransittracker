@@ -14,8 +14,6 @@ import VectorSource from "ol/source/Vector";
 import VectorTileSource from "ol/source/VectorTile";
 import XYZSource from "ol/source/XYZ";
 
-import Feature from "ol/Feature";
-
 import GeoJSONFormat from "ol/format/GeoJSON";
 import MVTFormat from "ol/format/MVT";
 
@@ -23,6 +21,10 @@ import Collection from "ol/Collection";
 import { Coordinate } from "ol/coordinate";
 import { EventsKey } from "ol/events";
 import { boundingExtent, containsExtent, Extent } from "ol/extent";
+import Feature from "ol/Feature";
+import Geolocation from "ol/Geolocation";
+import Geometry from "ol/geom/Geometry";
+import Point from "ol/geom/Point";
 import { bbox as bboxLoadingStrategy } from "ol/loadingstrategy";
 import { unByKey } from "ol/Observable";
 import { transformExtent } from "ol/proj";
@@ -35,12 +37,18 @@ import {
   INITIAL_ZOOM,
   MIN_ZOOM,
   MAX_ZOOM,
+  STREET_LEVEL_ZOOM,
   FEATURE_LAYER_MIN_ZOOM,
   GEOGRAPHIC_PROJECTION,
   NATIVE_PROJECTION,
+  USER_LOCATION_ACCURACY_THRESHOLD,
 } from "../const";
 
-import { STOP_STYLE } from "./map-styles";
+import {
+  STOP_STYLE,
+  USER_LOCATION_ACCURACY_STYLE,
+  USER_LOCATION_STYLE,
+} from "./map-styles";
 
 type OnFeatureCallback = (
   map: Map,
@@ -52,6 +60,13 @@ type OnFeatureCallback = (
 
 type NoFeatureCallback = (event: Event) => any;
 
+export interface UserLocation {
+  position: Coordinate | undefined;
+  accuracy: number | undefined;
+  accuracyGeom: Geometry;
+  heading: number | undefined;
+}
+
 export default class Map {
   private readonly map: OLMap;
   private readonly view: View;
@@ -61,8 +76,9 @@ export default class Map {
   private readonly stopsLayer: VectorLayer;
   private readonly userLocationLayer: VectorLayer;
   private listenerKeys: EventsKey[] = [];
-  private overviewMap: OLMap;
-  private overviewMapBaseLayers: BaseLayer[];
+  private readonly overviewMap: OLMap;
+  private readonly overviewMapBaseLayers: BaseLayer[];
+  private readonly geolocator: Geolocation;
 
   constructor(
     private initialCenter: number[] = INITIAL_CENTER,
@@ -132,6 +148,16 @@ export default class Map {
         constrainResolution: true,
         constrainRotation: true,
       }),
+    });
+
+    this.geolocator = new Geolocation({
+      projection: this.view.getProjection(),
+      tracking: true,
+      trackingOptions: {
+        maximumAge: 2 * 1000,
+        enableHighAccuracy: true,
+        timeout: 30 * 1000,
+      },
     });
 
     this.on("moveend", () => {
@@ -315,6 +341,71 @@ export default class Map {
       throw new Error();
     }
     return layer;
+  }
+
+  addGeolocatorListener(
+    type: string,
+    listener: (event: { target: Geolocation; code?: number }) => any,
+    once = false
+  ): EventsKey {
+    const key = (
+      once
+        ? this.geolocator.once(type, listener)
+        : this.geolocator.on(type, listener)
+    ) as EventsKey;
+    this.listenerKeys.push(key);
+    return key;
+  }
+
+  getUserLocation(): UserLocation {
+    const geolocator = this.geolocator;
+    const position = geolocator.getPosition();
+    const accuracy = geolocator.getAccuracy();
+    const accuracyGeom = geolocator.getAccuracyGeometry();
+    const heading = geolocator.getHeading() || 0;
+    return {
+      position,
+      accuracy,
+      accuracyGeom,
+      heading,
+    };
+  }
+
+  showUserLocation(zoomTo = false): void {
+    const userLocation = this.getUserLocation();
+    const { position, accuracy, accuracyGeom } = userLocation;
+    const layer = this.userLocationLayer;
+    const source = layer.getSource();
+    source.clear();
+    if (position) {
+      const feature = new Feature({
+        geometry: new Point(position),
+      });
+      feature.setStyle(USER_LOCATION_STYLE);
+      source.addFeature(feature);
+      console.log(accuracy, accuracyGeom);
+      if (
+        accuracy &&
+        accuracy > USER_LOCATION_ACCURACY_THRESHOLD &&
+        accuracyGeom
+      ) {
+        const accuracyFeature = new Feature({
+          geometry: accuracyGeom,
+        });
+        accuracyFeature.setStyle(USER_LOCATION_ACCURACY_STYLE);
+        source.addFeature(accuracyFeature);
+      }
+      layer.setVisible(true);
+      if (zoomTo) {
+        if (this.getZoom() > STREET_LEVEL_ZOOM) {
+          this.setCenter(position);
+        } else {
+          this.setCenterAndZoom(position, STREET_LEVEL_ZOOM);
+        }
+      }
+    } else {
+      layer.setVisible(false);
+    }
   }
 }
 

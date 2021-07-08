@@ -121,8 +121,8 @@ export const store = createStore<State>({
       state.cancelTokenSource = undefined;
       state.timeoutID = undefined;
     },
-    setError(state, payload: { error: Error }) {
-      state.error = payload.error;
+    setError(state, payload: Error) {
+      state.error = payload;
     },
     setCancelTokenSource(state, payload?: { source: CancelTokenSource }) {
       if (state.cancelTokenSource) {

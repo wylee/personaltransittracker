@@ -14,6 +14,7 @@ export const FEATURE_LAYER_MIN_ZOOM = 10;
 export const BASE_LAYER_LABELS = ["Map", "Satellite", "OpenStreetMap"];
 export const GEOGRAPHIC_PROJECTION = getProjection("EPSG:4326");
 export const NATIVE_PROJECTION = getProjection("EPSG:3857");
+export const USER_LOCATION_ACCURACY_THRESHOLD = 50; // meters?
 
 if (DEBUG) {
   BASE_LAYER_LABELS.unshift("Debug");

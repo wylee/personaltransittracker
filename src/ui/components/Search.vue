@@ -13,7 +13,7 @@
         type="submit"
         title="Search"
         class="material-icons"
-        :disabled="!(term.trim() || error)"
+        :disabled="!term.trim()"
       >
         search
       </button>
@@ -23,7 +23,7 @@
         title="Clear"
         class="material-icons"
         @click="reset"
-        :disabled="!term"
+        :disabled="!(term || error)"
       >
         close
       </button>

@@ -1,5 +1,5 @@
 <template>
-  <div id="map" @click="onClick" @contextmenu.prevent.stop="openContextMenu">
+  <div id="map" @click="onClick" @contextmenu.prevent.stop="onContextMenu">
     <div class="controls bottom-left column" @contextmenu.stop="">
       <div class="mapbox-wordmark">
         <a
@@ -20,7 +20,7 @@
         type="button"
         title="Find my location"
         class="material-icons"
-        @click="map.setInitialCenterAndZoom()"
+        @click="zoomToUserLocation()"
       >
         my_location
       </button>
@@ -82,13 +82,13 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, onUnmounted, ref } from "vue";
+import VectorLayer from "ol/layer/Vector";
 import { STREET_LEVEL_ZOOM, MAPBOX_WORDMARK_IMAGE_DATA } from "../const";
 import { useStore } from "../store";
 import Map from "./map";
 import { STOP_STYLE_SELECTED } from "./map-styles";
 import MapContextMenu from "./MapContextMenu.vue";
 import StopInfo from "./StopInfo.vue";
-import VectorLayer from "ol/layer/Vector";
 
 export default defineComponent({
   name: "Map",
@@ -100,6 +100,7 @@ export default defineComponent({
     const nextBaseLayerLabel = ref(map.getNextBaseLayer().get("shortLabel"));
     const stopsLayer = map.getLayer("Stops") as VectorLayer;
     const stopsSource = stopsLayer.getSource();
+    const userLocation = ref(null);
     const unsubscribers: (() => void)[] = [];
 
     unsubscribers.push(
@@ -157,6 +158,19 @@ export default defineComponent({
       store.commit("nextBaseLayer", { numBaseLayers });
     }
 
+    function zoomToUserLocation() {
+      const userLocation = map.getUserLocation();
+      if (userLocation.position) {
+        map.showUserLocation(/*zoomTo*/ true);
+      } else {
+        store.commit("setError", {
+          title: "Location Error",
+          explanation: "Could not determine your location.",
+          detail: "Check your browser location settings and try again.",
+        });
+      }
+    }
+
     function onClick() {
       store.commit("closeMapContextMenu");
     }
@@ -184,6 +198,39 @@ export default defineComponent({
         stopsLayer
       );
 
+      // Initial zoom to user location
+      map.addGeolocatorListener(
+        "change",
+        () => map.showUserLocation(/* zoomTo */ true),
+        /* once */ true
+      );
+
+      map.addGeolocatorListener("change", () => map.showUserLocation());
+
+      map.addGeolocatorListener("error", (error) => {
+        let explanation;
+        let detail;
+
+        switch (error.code) {
+          case 1:
+            explanation =
+              "Access to location services have been disabled for this site.";
+            detail = "Check your browser location settings and try again.";
+            break;
+          case 3:
+            explanation = "Could not find your location after 30 seconds.";
+            break;
+          default:
+            explanation = "Could not determine your location.";
+        }
+
+        store.commit("setError", {
+          title: "Location Error",
+          explanation,
+          detail,
+        });
+      });
+
       map.setTarget("map", "overview-map");
     });
 
@@ -196,6 +243,8 @@ export default defineComponent({
       map,
       nextBaseLayerLabel,
       nextBaseLayer,
+      userLocation,
+      zoomToUserLocation,
       onClick,
       onContextMenu,
       MAPBOX_WORDMARK_IMAGE_DATA,
